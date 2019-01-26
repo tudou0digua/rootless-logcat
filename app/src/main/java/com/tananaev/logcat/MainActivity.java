@@ -74,6 +74,7 @@ public class MainActivity extends AppCompatActivity {
     private ReaderTask readerTask;
 
     private MenuItem statusItem;
+    private MenuItem saveItem;
     private MenuItem reconnectItem;
     private MenuItem scrollItem;
     private MenuItem filterItem;
@@ -81,6 +82,8 @@ public class MainActivity extends AppCompatActivity {
     private MenuItem moreMenuItem;
 
     private boolean scroll = true;
+
+    private boolean isMainActivityVisible = false;
 
     private static class StatusUpdate {
         private int statusMessage;
@@ -104,6 +107,8 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        startService(new Intent(this, ForegroundService.class));
 
         recyclerView = (RecyclerView) findViewById(android.R.id.list);
 
@@ -138,7 +143,7 @@ public class MainActivity extends AppCompatActivity {
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
         if (!preferences.getBoolean(KEY_WARNING_SHOWN, false)) {
             new WarningFragment().show(getFragmentManager(), null);
-            preferences.edit().putBoolean(KEY_WARNING_SHOWN, true).apply();
+//            preferences.edit().putBoolean(KEY_WARNING_SHOWN, true).apply();
         }
     }
 
@@ -153,7 +158,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void stopReader() {
-        adapter.clear();
+//        adapter.clear();
         if (readerTask != null) {
             readerTask.cancel(true);
             readerTask = null;
@@ -162,6 +167,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void restartReader() {
         stopReader();
+        adapter.clear();
         readerTask = new ReaderTask();
         readerTask.execute();
     }
@@ -197,6 +203,7 @@ public class MainActivity extends AppCompatActivity {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.main, menu);
         statusItem = menu.findItem(R.id.view_status);
+        saveItem = menu.findItem(R.id.action_save);
         reconnectItem = menu.findItem(R.id.action_reconnect);
         scrollItem = menu.findItem(R.id.action_scroll);
         filterItem = menu.findItem(R.id.action_filter);
@@ -209,10 +216,26 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        isMainActivityVisible = true;
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        isMainActivityVisible = false;
+    }
+
+    @Override
     protected void onDestroy() {
         super.onDestroy();
 
         stopReader();
+
+        saveAllLogToFile();
+
+        stopService(new Intent(this, ForegroundService.class));
     }
 
     @Override
@@ -236,10 +259,28 @@ public class MainActivity extends AppCompatActivity {
             case R.id.action_search:
                 showSearchDialog();
                 break;
+            case R.id.action_save:
+                saveAllLogToFile();
+                break;
+            case R.id.action_start:
+                restartReader();
+                break;
+            case R.id.action_stop:
+                stopReader();
+                saveAllLogToFile();
+                break;
             default:
                 return false;
         }
         return true;
+    }
+
+    private void saveAllLogToFile() {
+        FileManager.getInstance().saveAllLogToFile();
+        if (adapter != null && adapter.getItemCount() > 0) {
+            SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+            sharedPreferences.edit().putBoolean(KEY_WARNING_SHOWN, true).apply();
+        }
     }
 
     private void showFilterDialog() {
@@ -344,7 +385,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected void onProgressUpdate(StatusUpdate... items) {
             for (StatusUpdate statusUpdate : items) {
-                if (statusUpdate.getStatusMessage() != 0) {
+                if (statusUpdate.getStatusMessage() != 0 && isMainActivityVisible) {
                     statusItem.setTitle(statusUpdate.getStatusMessage());
                     reconnectItem.setVisible(statusUpdate.getStatusMessage() != R.string.status_active);
                     scrollItem.setVisible(statusUpdate.getStatusMessage() == R.string.status_active);
@@ -353,10 +394,13 @@ public class MainActivity extends AppCompatActivity {
                     moreMenuItem.setVisible(statusUpdate.getStatusMessage() == R.string.status_active);
                 }
                 if (statusUpdate.getLines() != null) {
-                    adapter.addItems(statusUpdate.getLines());
-                    if (scroll) {
-                        recyclerView.scrollToPosition(adapter.getItemCount() - 1);
+                    if (isMainActivityVisible) {
+                        adapter.addItems(statusUpdate.getLines());
+                        if (scroll) {
+                            recyclerView.scrollToPosition(adapter.getItemCount() - 1);
+                        }
                     }
+                    FileManager.getInstance().addData(statusUpdate.getLines());
                 }
             }
         }

@@ -18,9 +18,6 @@ package com.tananaev.logcat;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.DialogFragment;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
 
 public class WarningFragment extends DialogFragment {
@@ -29,14 +26,14 @@ public class WarningFragment extends DialogFragment {
     public Dialog onCreateDialog(Bundle savedInstanceState) {
         return new AlertDialog.Builder(getActivity())
                 .setMessage(R.string.warning_text)
-                .setPositiveButton(R.string.warning_more, new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        Intent intent = new Intent(Intent.ACTION_VIEW);
-                        intent.setData(Uri.parse("https://github.com/tananaev/rootless-logcat/blob/master/README.md"));
-                        startActivity(intent);
-                    }
-                })
+//                .setPositiveButton(R.string.warning_more, new DialogInterface.OnClickListener() {
+//                    @Override
+//                    public void onClick(DialogInterface dialogInterface, int i) {
+//                        Intent intent = new Intent(Intent.ACTION_VIEW);
+//                        intent.setData(Uri.parse("https://github.com/tananaev/rootless-logcat/blob/master/README.md"));
+//                        startActivity(intent);
+//                    }
+//                })
                 .setNegativeButton(R.string.warning_close, null)
                 .create();
     }

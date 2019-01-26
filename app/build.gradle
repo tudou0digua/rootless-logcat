@@ -5,9 +5,9 @@ android {
     buildToolsVersion '27.0.3'
 
     defaultConfig {
-        applicationId "com.tananaev.logcat"
+        applicationId "com.tananaev.logcat3"
         minSdkVersion 18
-        targetSdkVersion 27
+        targetSdkVersion 22
         versionCode 10
         versionName "1.9"
     }
